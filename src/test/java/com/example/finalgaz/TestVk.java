@@ -1,46 +1,64 @@
 package com.example.finalgaz;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.Test;
 
-import javax.xml.transform.Result;
-
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.mockito.BDDMockito.given;
+import static io.restassured.RestAssured.given;
+
 
 public class TestVk extends AbstractTest{
 
 
+ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    public void firstTest(){
-//        wireMockServer.stub("/vk/user.getid")
+    public void firstTest() throws JsonProcessingException {
+        Request request = new Request("561468586","ufc");
+
         configureFor("localhost", 8082);
-        stubFor(get("\"https://api.vk.com/method/groups.isMember?bridgeEndpoint=true&\" +\n" +
-                "        \"user_id=561468586&group_id=breed_dog_help&\" +\n" +
-                "        \"access_token=vk1.a.YhVsQ9Wmc-3Wp-vs0CupiJTu-9dX5jW-BjkjVVFZl3dHwTVmHu6gfkypromLIXaEd6NlQwFgQ8FqFK7rGML1vibFK7U4cFSX0CHxGlo1ZO-\" +\n" +
-                "        \"81RN4L7QsWNZfYaw9SHzfPyxnaaqxQVSgdE9_-ukZ0MRRiQ51RRRFeZqEx8dUX09ZllvWQzYqXNHFxQmK84Oa&v=5.131\"")
-                .withHeader("Content-Type", containing("xml"))
+        stubFor(post(urlPathMatching("/method/groups.isMember"))
+                .withHeader("vk_service_token",equalTo("token"))
                 .willReturn(ok()
-                        .withHeader("Content-Type", "text/xml")
-                        .withBody("<response>SUCCESS</response>")));
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody("NOT_FOUND")
+                )
 
-        Result result = myHttpServiceCallingObject.doSomething();
-        assertTrue(result.wasSuccessful());
+        );
 
-        verify(postRequestedFor(urlPathEqualTo("/my/resource"))
-                .withRequestBody(matching(".*message-1234.*"))
-                .withHeader("Content-Type", equalTo("text/xml")));
-
-
-
-        //можно указать с какими параметрами пришел запрос
-        //вернуть какое либо бади
-
-
-        //здесть отправлять запрос на localhost:8080/webjars/swagger-ui/vk...
-//        assertThat(testClient.get("/some/thing").statusCode(), is(200));
-
+        given()
+                .body(objectMapper.writeValueAsString(request))
+                .header("vk_service_token","token")
+                .post("/api/vk")
+                .then()
+                .assertThat()
+                .statusCode(404);
 
     }
+    @Test
+    public void secondTest() throws JsonProcessingException {
+        Request request = new Request("561468586","ullfddetfhhvhggfc");
+
+        configureFor("localhost", 8082);
+        stubFor(post(urlPathMatching("/method/users.get"))
+                .withHeader("vk_service_token",equalTo("token"))
+                .willReturn(badRequest()
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody("NOT_FOUND")
+                )
+        );
+
+        given()
+                .body(objectMapper.writeValueAsString(request))
+                .header("vk_service_token","token")
+                .post("/api/vk")
+                .then()
+                .assertThat()
+                .statusCode(404);
+
+    }
+
+
 }
